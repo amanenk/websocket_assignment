@@ -10,20 +10,25 @@ import (
 	"log"
 	"net/http"
 	"os"
+	"time"
 )
 
 func Start() {
-	cfg := config.Load()
-
-	err := logger.Load() //todo maybe add some config to loader
-
+	cfg, err := config.Load()
 	if err != nil {
-		log.Fatalf("Failed to laod logger: %s", err.Error())
+		log.Fatalf("Failed to laod config: %v", err)
+	}
+
+	err = logger.Load() //todo maybe add some config to loader
+	if err != nil {
+		log.Fatalf("Failed to laod logger: %v", err)
 	}
 
 	server := &http.Server{
-		Addr:    cfg.ListenUrl,
-		Handler: handlers.NewRouter(),
+		Addr:         cfg.ListenUrl,
+		Handler:      handlers.NewRouter(),
+		ReadTimeout:  5 * time.Second,
+		WriteTimeout: 5 * time.Second,
 	}
 
 	logger.Get().Info("Listening...", zap.String("listen_url", cfg.ListenUrl))

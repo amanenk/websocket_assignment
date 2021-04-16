@@ -2,37 +2,37 @@ package broadcast
 
 import (
 	"github.com/fdistorted/websocket-practical/models"
-	logger "github.com/fdistorted/websocket-practical/server/loggger"
-	"github.com/fdistorted/websocket-practical/server/storage"
-	"go.uber.org/zap"
+	"github.com/fdistorted/websocket-practical/server/clients-storage"
 	"time"
 )
 
-func InitBroadcast() {
+func InitBroadcast() chan bool {
 	ticker := time.NewTicker(100 * time.Millisecond)
-	done := make(chan bool)
+	stopChannel := make(chan bool)
 
 	go func() {
 		for {
 			select {
-			case <-done:
+			case <-stopChannel:
+				ticker.Stop()
 				return
 			case <-ticker.C:
-				for conn, client := range storage.ClientStorage.Clients {
+				msg := models.BeaconBody{
+					Timestamp: time.Now().Unix(),
+				}
+
+				clients_storage.ClientStorage.Mutex.Lock()
+				for _, client := range clients_storage.ClientStorage.Clients {
 					if client.Sub {
-						msg := models.BeaconBody{
-							ClientId:  client.ClientId,
-							Timestamp: time.Now().Unix(),
-						}
-						err := conn.WriteJSON(msg)
-						if err != nil {
-							logger.Get().Info("client disconnected", zap.String("client_id", client.ClientId), zap.Int("clients", storage.ClientStorage.GetClientsCount()))
-							storage.ClientStorage.Delete(conn)
-							break
-						}
+						go func() {
+							msg.ClientId = client.ClientId
+							client.Send(msg)
+						}()
 					}
 				}
+				clients_storage.ClientStorage.Mutex.Unlock()
 			}
 		}
 	}()
+	return stopChannel
 }

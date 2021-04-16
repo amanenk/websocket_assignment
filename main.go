@@ -2,7 +2,6 @@ package main
 
 import (
 	"github.com/fdistorted/websocket-practical/server"
-	"time"
 )
 
 func main() {
@@ -10,10 +9,6 @@ func main() {
 	go func() {
 		server.Start()
 	}()
-
-	time.Sleep(time.Millisecond * 100)
-
-	//todo start client
 
 	select {}
 }

@@ -5,12 +5,12 @@ import (
 )
 
 type Config struct {
-	ListenUrl string `envconfig:"LISTEN_URL" default:":5000"`
+	Url string `envconfig:"URL" default:"ws://localhost:5000/ws"`
 }
 
 func Load() (*Config, error) {
 	var cfg Config
-	err := envconfig.Process("SERVER", &cfg)
+	err := envconfig.Process("CLIENT", &cfg)
 	if err != nil {
 		return nil, err
 	}

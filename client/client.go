@@ -1,9 +1,12 @@
 package client
 
 import (
-	"flag"
+	"github.com/fdistorted/websocket-practical/client/config"
+	"github.com/fdistorted/websocket-practical/models"
+	logger "github.com/fdistorted/websocket-practical/server/loggger"
+	"go.uber.org/zap"
 	"log"
-	"net/url"
+	"math/rand"
 	"os"
 	"os/signal"
 	"time"
@@ -11,47 +14,71 @@ import (
 	"github.com/gorilla/websocket"
 )
 
-var addr = flag.String("addr", "localhost:5000", "http service address")
-
 func Start() {
-	flag.Parse()
-	log.SetFlags(0)
+	cfg, err := config.Load()
+	if err != nil {
+		log.Fatalf("Failed to laod config: %v", err)
+	}
+
+	err = logger.Load()
+	if err != nil {
+		log.Fatalf("Failed to laod logger: %v", err)
+	}
 
 	interrupt := make(chan os.Signal, 1)
 	signal.Notify(interrupt, os.Interrupt)
 
-	u := url.URL{Scheme: "ws", Host: *addr, Path: "/ws"}
-	log.Printf("connecting to %s", u.String())
+	logger.Get().Debug("connecting", zap.String("url", cfg.Url))
 
-	c, _, err := websocket.DefaultDialer.Dial(u.String(), nil)
+	c, _, err := websocket.DefaultDialer.Dial(cfg.Url, nil)
 	if err != nil {
 		log.Fatal("dial:", err)
 	}
 	defer c.Close()
 
-	done := make(chan struct{})
+	done := make(chan bool)
 
 	go func() {
 		defer close(done)
 		for {
 			_, message, err := c.ReadMessage()
 			if err != nil {
-				log.Println("read:", err)
+				logger.Get().Error("read:", zap.Error(err))
 				return
 			}
-			log.Printf("recv: %s", message)
+			logger.Get().Debug("recv:", zap.String("msg", string(message)))
+
 		}
 	}()
 
-	ticker := time.NewTicker(time.Second)
-	defer ticker.Stop()
+	subscribeAfter := time.Duration(rand.Intn(100)) * time.Millisecond //randomise a bit subscription message
+	unsubscribeAfter := subscribeAfter + 120*time.Second
+	subscribeTimer := time.NewTimer(subscribeAfter)
+	unsubscribeTimer := time.NewTimer(unsubscribeAfter)
+	getConnectionsTicker := time.NewTicker(1 * time.Second)
 
+outer:
 	for {
 		select {
 		case <-done:
 			return
-		case t := <-ticker.C:
-			err := c.WriteMessage(websocket.TextMessage, []byte(t.String()))
+		case <-subscribeTimer.C:
+			cmd := models.CommandBody{Command: models.Subscribe}
+			err := c.WriteJSON(cmd)
+			if err != nil {
+				log.Println("write:", err)
+				return
+			}
+		case <-unsubscribeTimer.C:
+			cmd := models.CommandBody{Command: models.Unsubscribe}
+			err := c.WriteJSON(cmd)
+			if err != nil {
+				log.Println("write:", err)
+				return
+			}
+		case <-getConnectionsTicker.C:
+			cmd := models.CommandBody{Command: models.NumConnections}
+			err := c.WriteJSON(cmd)
 			if err != nil {
 				log.Println("write:", err)
 				return
@@ -70,7 +97,8 @@ func Start() {
 			case <-done:
 			case <-time.After(time.Second):
 			}
-			return
+			break outer
 		}
 	}
+	logger.Get().Info("exiting")
 }
