@@ -1,7 +1,7 @@
 package handlers
 
 import (
-	"github.com/fdistorted/websocket-practical/server/handlers/websocket"
+	"github.com/fdistorted/websocket-practical/server/handlers/ws"
 	"github.com/gorilla/mux"
 	"net/http"
 )
@@ -9,7 +9,7 @@ import (
 func NewRouter() *mux.Router {
 	r := mux.NewRouter()
 
-	r.HandleFunc("/ws", websocket.Get).Methods(http.MethodGet).Schemes("http")
+	r.HandleFunc("/ws", ws.Get).Methods(http.MethodGet).Schemes("http")
 
 	return r
 }

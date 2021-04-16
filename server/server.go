@@ -2,10 +2,10 @@ package server
 
 import (
 	"fmt"
-	"github.com/fdistorted/websocket-practical/server/broadcast"
 	"github.com/fdistorted/websocket-practical/server/config"
 	"github.com/fdistorted/websocket-practical/server/handlers"
 	logger "github.com/fdistorted/websocket-practical/server/loggger"
+	"github.com/fdistorted/websocket-practical/server/websocket/broadcast"
 	"go.uber.org/zap"
 	"log"
 	"net/http"
@@ -24,6 +24,10 @@ func Start() {
 		log.Fatalf("Failed to laod logger: %v", err)
 	}
 
+	//storage := clients.NewStorage()
+	//start broadcaster
+	broadcast.InitBroadcast()
+
 	server := &http.Server{
 		Addr:         cfg.ListenUrl,
 		Handler:      handlers.NewRouter(),
@@ -32,10 +36,6 @@ func Start() {
 	}
 
 	logger.Get().Info("Listening...", zap.String("listen_url", cfg.ListenUrl))
-
-	//start broadcaster
-	broadcast.InitBroadcast()
-
 	err = server.ListenAndServe()
 	if err != nil {
 		// logger.Get().Error("Failed to initialize HTTP server", zap.Error(err))

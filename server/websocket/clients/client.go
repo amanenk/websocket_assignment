@@ -1,4 +1,4 @@
-package clients_storage
+package clients
 
 import (
 	"encoding/json"
@@ -35,13 +35,16 @@ func (c *Client) Close() error {
 	return c.socket.Close()
 }
 
-func (c *Client) Read() error {
+func (c *Client) SetSubscribed(sub bool) {
+	c.Sub = sub
+}
+
+func (c *Client) Read() {
 	for {
 		var cmd models.CommandBody
 		mt, body, err := c.socket.ReadMessage()
 		if err != nil {
-			handleClientError(c.socket, "failed to read from client", c.ClientId, err)
-			return err
+			handleClientError("failed to read from client", c.ClientId, err)
 		}
 
 		logger.Get().Debug("got message", zap.Int("mt", mt), zap.String("body", string(body)))
@@ -54,44 +57,42 @@ func (c *Client) Read() error {
 				c.writeChannel <- "failed to parse json"
 			} else {
 				switch cmd.Command {
-				case "SUBSCRIBE":
-					ClientStorage.Subscribe(c.socket)
+				case models.Subscribe:
+					c.SetSubscribed(true)
 					break
-				case "UNSUBSCRIBE":
-					ClientStorage.Unsubscribe(c.socket)
+				case models.Unsubscribe:
+					c.SetSubscribed(false)
 					break
-				case "NUM_CONNECTIONS":
+				case models.NumConnections:
 					msg := models.NumConnectionsBody{
-						NumConnection: ClientStorage.GetClientsCount(),
+						NumConnection: StorageObject.GetClientsCount(),
 					}
 					c.writeChannel <- msg
 					break
 				}
 			}
-
 		}
 	}
 }
 
-func (c *Client) Write() error {
+func (c *Client) Write() {
 	for {
 		select {
 		case toWrite := <-c.writeChannel:
 			c.mu.Lock()
 			err := c.socket.WriteJSON(toWrite)
 			if err != nil {
-				handleClientError(c.socket, "failed to send to connection", c.ClientId, err)
-				return err
+				handleClientError("failed to send to connection", c.ClientId, err)
 			}
 			c.mu.Unlock()
 		}
 	}
 }
 
-func handleClientError(conn *websocket.Conn, msg, clientId string, err error) {
-	ClientStorage.Delete(conn)
-	logger.Get().Error("websocket error, disconnecting",
-		zap.Int("clients", ClientStorage.GetClientsCount()),
+func handleClientError(msg, clientId string, err error) {
+	StorageObject.Delete(clientId)
+	logger.Get().Error("ws error, disconnecting",
+		zap.Int("clients", StorageObject.GetClientsCount()),
 		zap.String("client_id", clientId),
 		zap.String("error_msg", msg),
 		zap.Error(err))

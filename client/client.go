@@ -1,7 +1,6 @@
 package client
 
 import (
-	"github.com/fdistorted/websocket-practical/client/config"
 	"github.com/fdistorted/websocket-practical/models"
 	logger "github.com/fdistorted/websocket-practical/server/loggger"
 	"go.uber.org/zap"
@@ -14,27 +13,22 @@ import (
 	"github.com/gorilla/websocket"
 )
 
-func Start() {
-	cfg, err := config.Load()
-	if err != nil {
-		log.Fatalf("Failed to laod config: %v", err)
-	}
-
-	err = logger.Load()
-	if err != nil {
-		log.Fatalf("Failed to laod logger: %v", err)
-	}
-
+func Start(url string) {
 	interrupt := make(chan os.Signal, 1)
 	signal.Notify(interrupt, os.Interrupt)
 
-	logger.Get().Debug("connecting", zap.String("url", cfg.Url))
+	logger.Get().Debug("connecting", zap.String("url", url))
 
-	c, _, err := websocket.DefaultDialer.Dial(cfg.Url, nil)
+	c, _, err := websocket.DefaultDialer.Dial(url, nil)
 	if err != nil {
 		log.Fatal("dial:", err)
 	}
-	defer c.Close()
+	defer func() {
+		err := c.Close()
+		if err != nil {
+			logger.Get().Error("failed to close client connection", zap.Error(err))
+		}
+	}()
 
 	done := make(chan bool)
 

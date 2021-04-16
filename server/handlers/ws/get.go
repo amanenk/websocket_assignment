@@ -1,8 +1,8 @@
-package websocket
+package ws
 
 import (
-	"github.com/fdistorted/websocket-practical/server/clients-storage"
 	logger "github.com/fdistorted/websocket-practical/server/loggger"
+	"github.com/fdistorted/websocket-practical/server/websocket/clients"
 	"github.com/gorilla/websocket"
 	"go.uber.org/zap"
 	"net/http"
@@ -24,10 +24,15 @@ func Get(w http.ResponseWriter, r *http.Request) {
 		//todo return error
 	}
 
-	client := clients_storage.NewClient(conn)
-	clients_storage.ClientStorage.Add(client)
-	logger.Get().Debug("client connected", zap.String("client_id", clients_storage.ClientStorage.Clients[conn].ClientId), zap.Int("clients", clients_storage.ClientStorage.GetClientsCount()))
-	defer client.Close()
+	client := clients.NewClient(conn)
+	clients.StorageObject.Add(client)
+	logger.Get().Debug("client connected", zap.String("client_id", client.ClientId), zap.Int("clients", clients.StorageObject.GetClientsCount()))
+	defer func() {
+		err := client.Close()
+		if err != nil {
+			logger.Get().Error("failed to close client connection", zap.Error(err))
+		}
+	}()
 
 	go client.Write()
 	// reads the message from client
