@@ -1,7 +1,6 @@
 package main
 
 import (
-	"fmt"
 	"github.com/fdistorted/websocket-practical/client"
 	logger "github.com/fdistorted/websocket-practical/server/loggger"
 	"go.uber.org/zap"
@@ -27,12 +26,12 @@ func main() {
 		url = args[0]
 	}
 	if len(args) >= 2 {
-		parsed, err := strconv.Atoi(args[0])
+		parsed, err := strconv.Atoi(args[1])
 		if err != nil {
 			logger.Get().Fatal("failed to parse argument. try again")
 		}
 		if parsed > 20000 {
-			logger.Get().Fatal("number is too big")
+			logger.Get().Fatal("number of connections is too big")
 		}
 		connections = parsed
 	}
@@ -48,7 +47,7 @@ func main() {
 			client.Start(url)
 			wg.Done()
 		}()
-		fmt.Printf("\r%d connections", i+1)
+		//fmt.Printf("\r%d connections", i+1)
 	}
 
 	wg.Wait()

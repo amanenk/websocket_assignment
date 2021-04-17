@@ -1,6 +1,7 @@
 package ws
 
 import (
+	"github.com/fdistorted/websocket-practical/models"
 	logger "github.com/fdistorted/websocket-practical/server/loggger"
 	"github.com/fdistorted/websocket-practical/server/websocket/clients"
 	"github.com/gorilla/websocket"
@@ -36,5 +37,26 @@ func Get(w http.ResponseWriter, r *http.Request) {
 
 	go client.Write()
 	// reads the message from client
-	client.Read()
+	client.Read(func(data map[string]interface{}) {
+		command, ok := data["command"]
+		if ok {
+			switch command.(string) {
+			case models.Subscribe:
+				client.SetSubscribed(true)
+				break
+			case models.Unsubscribe:
+				client.SetSubscribed(false)
+				break
+			case models.NumConnections:
+				msg := models.NumConnectionsBody{
+					NumConnection: clients.StorageObject.GetClientsCount(),
+				}
+				client.Send(msg)
+				break
+			default:
+				logger.Get().Warn("unsupported command", zap.String("command", data["command"].(string)))
+				break
+			}
+		}
+	})
 }

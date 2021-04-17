@@ -3,6 +3,7 @@ package client
 import (
 	"github.com/fdistorted/websocket-practical/models"
 	logger "github.com/fdistorted/websocket-practical/server/loggger"
+	"github.com/fdistorted/websocket-practical/server/websocket/clients"
 	"go.uber.org/zap"
 	"log"
 	"math/rand"
@@ -19,37 +20,39 @@ func Start(url string) {
 
 	logger.Get().Debug("connecting", zap.String("url", url))
 
-	c, _, err := websocket.DefaultDialer.Dial(url, nil)
+	conn, _, err := websocket.DefaultDialer.Dial(url, nil)
 	if err != nil {
 		log.Fatal("dial:", err)
 	}
+
+	client := clients.NewClient(conn)
+
 	defer func() {
-		err := c.Close()
+		err := client.Close()
 		if err != nil {
 			logger.Get().Error("failed to close client connection", zap.Error(err))
 		}
 	}()
 
+	go client.Write()
+
 	done := make(chan bool)
 
 	go func() {
 		defer close(done)
-		for {
-			_, message, err := c.ReadMessage()
-			if err != nil {
-				logger.Get().Error("read:", zap.Error(err))
-				return
+		client.Read(func(data map[string]interface{}) {
+			//fmt.Printf("got data: %+v\n", data)
+			value, ok := data["num_connections"]
+			if ok {
+				logger.Get().Info("got num connections answer", zap.Float64("num_connections", value.(float64)))
 			}
-			logger.Get().Debug("recv:", zap.String("msg", string(message)))
-
-		}
+		})
 	}()
 
+	client.Send(models.CommandBody{Command: models.NumConnections})
+
 	subscribeAfter := time.Duration(rand.Intn(100)) * time.Millisecond //randomise a bit subscription message
-	unsubscribeAfter := subscribeAfter + 120*time.Second
 	subscribeTimer := time.NewTimer(subscribeAfter)
-	unsubscribeTimer := time.NewTimer(unsubscribeAfter)
-	getConnectionsTicker := time.NewTicker(1 * time.Second)
 
 outer:
 	for {
@@ -57,32 +60,13 @@ outer:
 		case <-done:
 			return
 		case <-subscribeTimer.C:
-			cmd := models.CommandBody{Command: models.Subscribe}
-			err := c.WriteJSON(cmd)
-			if err != nil {
-				log.Println("write:", err)
-				return
-			}
-		case <-unsubscribeTimer.C:
-			cmd := models.CommandBody{Command: models.Unsubscribe}
-			err := c.WriteJSON(cmd)
-			if err != nil {
-				log.Println("write:", err)
-				return
-			}
-		case <-getConnectionsTicker.C:
-			cmd := models.CommandBody{Command: models.NumConnections}
-			err := c.WriteJSON(cmd)
-			if err != nil {
-				log.Println("write:", err)
-				return
-			}
+			client.Send(models.CommandBody{Command: models.Subscribe})
 		case <-interrupt:
-			log.Println("interrupt")
+			//log.Println("interrupt")
 
 			// Cleanly close the connection by sending a close message and then
 			// waiting (with timeout) for the server to close the connection.
-			err := c.WriteMessage(websocket.CloseMessage, websocket.FormatCloseMessage(websocket.CloseNormalClosure, ""))
+			err := conn.WriteMessage(websocket.CloseMessage, websocket.FormatCloseMessage(websocket.CloseNormalClosure, ""))
 			if err != nil {
 				log.Println("write close:", err)
 				return
