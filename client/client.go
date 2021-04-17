@@ -1,6 +1,7 @@
 package client
 
 import (
+	"fmt"
 	"github.com/fdistorted/websocket-practical/models"
 	logger "github.com/fdistorted/websocket-practical/server/loggger"
 	"github.com/fdistorted/websocket-practical/server/websocket/clients"
@@ -44,7 +45,7 @@ func Start(url string) {
 			//fmt.Printf("got data: %+v\n", data)
 			value, ok := data["num_connections"]
 			if ok {
-				logger.Get().Info("got num connections answer", zap.Float64("num_connections", value.(float64)))
+				fmt.Printf("num_connections: %v\r", value)
 			}
 		})
 	}()
