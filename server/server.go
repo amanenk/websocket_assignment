@@ -19,6 +19,9 @@ func Start() {
 		log.Fatalf("Failed to laod config: %v", err)
 	}
 
+	log.Printf("config loaded: %+v\n", cfg)
+	log.Printf("port variable: %+v\n", os.Getenv("PORT"))
+
 	err = logger.Load() //todo maybe add some config to loader
 	if err != nil {
 		log.Fatalf("Failed to laod logger: %v", err)
