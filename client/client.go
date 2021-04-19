@@ -102,7 +102,7 @@ func main() {
 	connections := 5000
 	url := "ws://localhost:5000/ws"
 
-	if len(args) == 1 {
+	if len(args) >= 1 {
 		url = args[0]
 	}
 	if len(args) >= 2 {
