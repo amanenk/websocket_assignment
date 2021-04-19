@@ -2,10 +2,12 @@ package server
 
 import (
 	"fmt"
+	"github.com/fdistorted/websocket-practical/filelimits"
 	"github.com/fdistorted/websocket-practical/server/config"
 	"github.com/fdistorted/websocket-practical/server/handlers"
 	logger "github.com/fdistorted/websocket-practical/server/loggger"
 	"github.com/fdistorted/websocket-practical/server/websocket/broadcast"
+	storage2 "github.com/fdistorted/websocket-practical/server/websocket/storage"
 	"go.uber.org/zap"
 	"log"
 	"net/http"
@@ -14,6 +16,9 @@ import (
 )
 
 func Start() {
+
+	// prepare system to run it should be confifured in deployment script
+	filelimits.MaxOpenFiles()
 	cfg, err := config.Load()
 	if err != nil {
 		log.Fatalf("Failed to laod config: %v", err)
@@ -27,15 +32,15 @@ func Start() {
 		log.Fatalf("Failed to laod logger: %v", err)
 	}
 
-	//storage := clients.NewStorage()
+	storage := storage2.NewStorage()
 	//start broadcaster
-	broadcast.InitBroadcast()
+	broadcast.InitBroadcast(storage)
 
 	addr := fmt.Sprintf(":%d", cfg.Port)
 
 	server := &http.Server{
 		Addr:         addr,
-		Handler:      handlers.NewRouter(),
+		Handler:      handlers.NewRouter(storage),
 		ReadTimeout:  5 * time.Second,
 		WriteTimeout: 5 * time.Second,
 	}

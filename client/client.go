@@ -2,6 +2,7 @@ package main
 
 import (
 	"fmt"
+	"github.com/fdistorted/websocket-practical/filelimits"
 	"github.com/fdistorted/websocket-practical/models"
 	logger "github.com/fdistorted/websocket-practical/server/loggger"
 	"github.com/fdistorted/websocket-practical/server/websocket/clients"
@@ -43,7 +44,11 @@ func Start(url string) {
 
 	go func() {
 		defer close(done)
-		client.Read(func(data map[string]interface{}) {
+		client.Read(func(data map[string]interface{}, err error) {
+			if err != nil {
+				// todo handle it somehow
+				return
+			}
 			//fmt.Printf("got data: %+v\n", data)
 			value, ok := data["num_connections"]
 			if ok {
@@ -54,7 +59,7 @@ func Start(url string) {
 
 	client.Send(models.CommandBody{Command: models.NumConnections})
 
-	subscribeAfter := time.Duration(rand.Intn(100)) * time.Millisecond //randomise a bit subscription message
+	subscribeAfter := time.Duration(rand.Intn(50)) * time.Millisecond //randomise a bit subscription message
 	subscribeTimer := time.NewTimer(subscribeAfter)
 
 outer:
@@ -76,7 +81,7 @@ outer:
 			}
 			select {
 			case <-done:
-			case <-time.After(time.Second):
+			case <-time.After(2 * time.Second):
 			}
 			break outer
 		}
@@ -85,6 +90,8 @@ outer:
 }
 
 func main() {
+
+	filelimits.MaxOpenFiles()
 	err := logger.Load()
 	if err != nil {
 		log.Fatalf("Failed to laod logger: %v", err)
@@ -115,8 +122,8 @@ func main() {
 
 	for i := 0; i < connections; i++ {
 		time.Sleep(time.Millisecond * 1)
+		wg.Add(1)
 		go func() {
-			wg.Add(1)
 			Start(url)
 			wg.Done()
 		}()

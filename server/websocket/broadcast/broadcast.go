@@ -2,11 +2,11 @@ package broadcast
 
 import (
 	"github.com/fdistorted/websocket-practical/models"
-	"github.com/fdistorted/websocket-practical/server/websocket/clients"
+	"github.com/fdistorted/websocket-practical/server/websocket/storage"
 	"time"
 )
 
-func InitBroadcast() chan bool {
+func InitBroadcast(storage *storage.Storage) chan bool {
 	ticker := time.NewTicker(100 * time.Millisecond)
 	stopChannel := make(chan bool)
 
@@ -21,14 +21,14 @@ func InitBroadcast() chan bool {
 					Timestamp: time.Now().Unix(),
 				}
 
-				clients.StorageObject.Mutex.Lock()
-				for _, client := range clients.StorageObject.Clients {
+				storage.Mutex.Lock()
+				for _, client := range storage.Clients {
 					if client.Sub {
 						msg.ClientId = client.ClientId
 						client.Send(msg)
 					}
 				}
-				clients.StorageObject.Mutex.Unlock()
+				storage.Mutex.Unlock()
 			}
 		}
 	}()

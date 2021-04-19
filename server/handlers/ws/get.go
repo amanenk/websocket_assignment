@@ -5,6 +5,7 @@ import (
 	"github.com/fdistorted/websocket-practical/models"
 	logger "github.com/fdistorted/websocket-practical/server/loggger"
 	"github.com/fdistorted/websocket-practical/server/websocket/clients"
+	storage2 "github.com/fdistorted/websocket-practical/server/websocket/storage"
 	"github.com/gorilla/websocket"
 	"go.uber.org/zap"
 	"net/http"
@@ -16,7 +17,15 @@ var upgrader = websocket.Upgrader{
 	},
 }
 
-func Get(w http.ResponseWriter, r *http.Request) {
+type WebsocketHandler struct {
+	storage *storage2.Storage
+}
+
+func NewWebsocketHandler(storage *storage2.Storage) *WebsocketHandler {
+	return &WebsocketHandler{storage: storage}
+}
+
+func (wh *WebsocketHandler) Get(w http.ResponseWriter, r *http.Request) {
 	logger.Get().Debug("got request")
 	conn, err := upgrader.Upgrade(w, r, nil)
 	if err != nil {
@@ -27,9 +36,11 @@ func Get(w http.ResponseWriter, r *http.Request) {
 	}
 
 	client := clients.NewClient(conn)
-	clients.StorageObject.Add(client)
-	logger.Get().Debug("client connected", zap.String("client_id", client.ClientId), zap.Int("clients", clients.StorageObject.GetClientsCount()))
+	wh.storage.Add(client)
+	logger.Get().Debug("client connected", zap.String("client_id", client.ClientId), zap.Int("clients", wh.storage.GetClientsCount()))
 	defer func() {
+		logger.Get().Debug("closing connection", zap.String("client_id", client.ClientId))
+		client.SetSubscribed(false)
 		err := client.Close()
 		if err != nil {
 			logger.Get().Error("failed to close client connection", zap.Error(err))
@@ -38,7 +49,12 @@ func Get(w http.ResponseWriter, r *http.Request) {
 
 	go client.Write()
 	// reads the message from client
-	client.Read(func(data map[string]interface{}) {
+	client.Read(func(data map[string]interface{}, err error) {
+		if err != nil {
+			//improve error handling
+			wh.storage.Delete(client.ClientId)
+			return
+		}
 		command, ok := data["command"]
 		if ok {
 			switch command.(string) {
@@ -50,7 +66,7 @@ func Get(w http.ResponseWriter, r *http.Request) {
 				break
 			case models.NumConnections:
 				msg := models.NumConnectionsBody{
-					NumConnection: clients.StorageObject.GetClientsCount(),
+					NumConnection: wh.storage.GetClientsCount(),
 				}
 				client.Send(msg)
 				break

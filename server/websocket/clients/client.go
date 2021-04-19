@@ -37,25 +37,17 @@ func (c *Client) SetSubscribed(sub bool) {
 	c.Sub = sub
 }
 
-func (c *Client) Read(callback func(data map[string]interface{})) {
+func (c *Client) Read(callback func(data map[string]interface{}, err error)) {
 	for {
 		var read map[string]interface{}
 		err := c.socket.ReadJSON(&read)
 		if err != nil {
-			if ce, ok := err.(*websocket.CloseError); ok {
-				switch ce.Code {
-				case websocket.CloseNormalClosure,
-					websocket.CloseGoingAway,
-					websocket.CloseNoStatusReceived:
-					logger.Get().Debug("Web socket closed by client")
-					return
-				}
-			}
 			handleClientError("failed to read from client", c.ClientId, err)
+			callback(nil, err)
 			return
 		}
 		logger.Get().Debug("got message")
-		callback(read)
+		callback(read, nil)
 	}
 }
 
@@ -66,7 +58,9 @@ func (c *Client) Write() {
 			c.mu.Lock()
 			err := c.socket.WriteJSON(toWrite)
 			if err != nil {
-				handleClientError("failed to send to connection", c.ClientId, err)
+				handleClientError("failed to write to client", c.ClientId, err)
+				// todo decide if we need to close the connection
+				return
 			}
 			c.mu.Unlock()
 		}
@@ -74,10 +68,14 @@ func (c *Client) Write() {
 }
 
 func handleClientError(msg, clientId string, err error) {
-	StorageObject.Delete(clientId)
-	logger.Get().Error("ws error, disconnecting",
-		zap.Int("clients", StorageObject.GetClientsCount()),
-		zap.String("client_id", clientId),
-		zap.String("error_msg", msg),
-		zap.Error(err))
+	if websocket.IsUnexpectedCloseError(err,
+		websocket.CloseNormalClosure,
+		websocket.CloseGoingAway,
+		websocket.CloseNoStatusReceived) {
+		logger.Get().Error("ws error",
+			zap.String("client_id", clientId),
+			zap.String("error_msg", msg),
+			zap.Error(err))
+	}
+
 }
