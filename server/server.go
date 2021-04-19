@@ -28,14 +28,16 @@ func Start() {
 	//start broadcaster
 	broadcast.InitBroadcast()
 
+	addr := fmt.Sprintf(":%d", cfg.Port)
+
 	server := &http.Server{
-		Addr:         cfg.ListenUrl,
+		Addr:         addr,
 		Handler:      handlers.NewRouter(),
 		ReadTimeout:  5 * time.Second,
 		WriteTimeout: 5 * time.Second,
 	}
 
-	logger.Get().Info("Listening...", zap.String("listen_url", cfg.ListenUrl))
+	logger.Get().Info("Listening...", zap.String("listen_url", addr))
 	err = server.ListenAndServe()
 	if err != nil {
 		// logger.Get().Error("Failed to initialize HTTP server", zap.Error(err))
