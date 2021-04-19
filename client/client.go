@@ -1,4 +1,4 @@
-package client
+package main
 
 import (
 	"fmt"
@@ -10,6 +10,8 @@ import (
 	"math/rand"
 	"os"
 	"os/signal"
+	"strconv"
+	"sync"
 	"time"
 
 	"github.com/gorilla/websocket"
@@ -79,5 +81,47 @@ outer:
 			break outer
 		}
 	}
-	logger.Get().Info("exiting")
+	logger.Get().Debug("exiting")
+}
+
+func main() {
+	err := logger.Load()
+	if err != nil {
+		log.Fatalf("Failed to laod logger: %v", err)
+	}
+
+	args := os.Args[1:]
+
+	connections := 5000
+	url := "ws://localhost:5000/ws"
+
+	if len(args) == 1 {
+		url = args[0]
+	}
+	if len(args) >= 2 {
+		parsed, err := strconv.Atoi(args[1])
+		if err != nil {
+			logger.Get().Fatal("failed to parse argument. try again")
+		}
+		if parsed > 20000 {
+			logger.Get().Fatal("number of connections is too big")
+		}
+		connections = parsed
+	}
+
+	var wg sync.WaitGroup
+
+	logger.Get().Info("connecting...", zap.Int("connections", connections), zap.String("url", url))
+
+	for i := 0; i < connections; i++ {
+		time.Sleep(time.Millisecond * 1)
+		go func() {
+			wg.Add(1)
+			Start(url)
+			wg.Done()
+		}()
+		//fmt.Printf("\r%d connections", i+1)
+	}
+
+	wg.Wait()
 }
