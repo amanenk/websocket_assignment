@@ -1,6 +1,7 @@
 module github.com/fdistorted/websocket-practical
 
-go 1.15
+// +heroku goVersion go1.16
+go 1.16
 
 require (
 	github.com/google/uuid v1.2.0

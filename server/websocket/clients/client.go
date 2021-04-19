@@ -42,6 +42,15 @@ func (c *Client) Read(callback func(data map[string]interface{})) {
 		var read map[string]interface{}
 		err := c.socket.ReadJSON(&read)
 		if err != nil {
+			if ce, ok := err.(*websocket.CloseError); ok {
+				switch ce.Code {
+				case websocket.CloseNormalClosure,
+					websocket.CloseGoingAway,
+					websocket.CloseNoStatusReceived:
+					logger.Get().Debug("Web socket closed by client")
+					return
+				}
+			}
 			handleClientError("failed to read from client", c.ClientId, err)
 			return
 		}
