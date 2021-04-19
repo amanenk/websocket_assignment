@@ -1,6 +1,7 @@
 package ws
 
 import (
+	"fmt"
 	"github.com/fdistorted/websocket-practical/models"
 	logger "github.com/fdistorted/websocket-practical/server/loggger"
 	"github.com/fdistorted/websocket-practical/server/websocket/clients"
@@ -10,8 +11,6 @@ import (
 )
 
 var upgrader = websocket.Upgrader{
-	//ReadBufferSize:  0,
-	//WriteBufferSize: 0,
 	CheckOrigin: func(r *http.Request) bool {
 		return true
 	},
@@ -22,7 +21,9 @@ func Get(w http.ResponseWriter, r *http.Request) {
 	conn, err := upgrader.Upgrade(w, r, nil)
 	if err != nil {
 		logger.Get().Error("failed to create conn connection %v", zap.Error(err))
-		//todo return error
+		w.WriteHeader(http.StatusBadRequest)
+		fmt.Fprintf(w, "not a websocket request")
+		return
 	}
 
 	client := clients.NewClient(conn)
