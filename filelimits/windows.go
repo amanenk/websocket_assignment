@@ -1,0 +1,3 @@
+package filelimits
+
+func MaxOpenFiles() {}
