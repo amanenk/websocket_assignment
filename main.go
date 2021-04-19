@@ -5,10 +5,5 @@ import (
 )
 
 func main() {
-	//start server
-	go func() {
-		server.Start()
-	}()
-
-	select {}
+	server.Start()
 }

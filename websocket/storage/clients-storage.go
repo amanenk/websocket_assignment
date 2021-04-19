@@ -1,7 +1,7 @@
 package storage
 
 import (
-	"github.com/fdistorted/websocket-practical/server/websocket/clients"
+	"github.com/fdistorted/websocket-practical/websocket/clients"
 	"sync"
 )
 

@@ -5,7 +5,7 @@ import (
 	"github.com/fdistorted/websocket-practical/filelimits"
 	"github.com/fdistorted/websocket-practical/models"
 	logger "github.com/fdistorted/websocket-practical/server/loggger"
-	"github.com/fdistorted/websocket-practical/server/websocket/clients"
+	"github.com/fdistorted/websocket-practical/websocket/clients"
 	"go.uber.org/zap"
 	"log"
 	"math/rand"
@@ -62,7 +62,6 @@ func Start(url string) {
 	subscribeAfter := time.Duration(rand.Intn(50)) * time.Millisecond //randomise a bit subscription message
 	subscribeTimer := time.NewTimer(subscribeAfter)
 
-outer:
 	for {
 		select {
 		case <-done:
@@ -83,7 +82,7 @@ outer:
 			case <-done:
 			case <-time.After(2 * time.Second):
 			}
-			break outer
+			return
 		}
 	}
 	logger.Get().Debug("exiting")
@@ -121,7 +120,7 @@ func main() {
 	logger.Get().Info("connecting...", zap.Int("connections", connections), zap.String("url", url))
 
 	for i := 0; i < connections; i++ {
-		time.Sleep(time.Millisecond * 1)
+		//time.Sleep(time.Millisecond * 1)
 		wg.Add(1)
 		go func() {
 			Start(url)

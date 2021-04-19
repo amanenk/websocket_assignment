@@ -3,7 +3,7 @@ package handlers
 import (
 	"fmt"
 	"github.com/fdistorted/websocket-practical/server/handlers/ws"
-	"github.com/fdistorted/websocket-practical/server/websocket/storage"
+	"github.com/fdistorted/websocket-practical/websocket/storage"
 	"github.com/gorilla/mux"
 	"net/http"
 	"time"

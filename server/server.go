@@ -6,8 +6,8 @@ import (
 	"github.com/fdistorted/websocket-practical/server/config"
 	"github.com/fdistorted/websocket-practical/server/handlers"
 	logger "github.com/fdistorted/websocket-practical/server/loggger"
-	"github.com/fdistorted/websocket-practical/server/websocket/broadcast"
-	storage2 "github.com/fdistorted/websocket-practical/server/websocket/storage"
+	"github.com/fdistorted/websocket-practical/websocket/broadcast"
+	storage2 "github.com/fdistorted/websocket-practical/websocket/storage"
 	"go.uber.org/zap"
 	"log"
 	"net/http"
@@ -16,8 +16,7 @@ import (
 )
 
 func Start() {
-
-	// prepare system to run it should be confifured in deployment script
+	// prepare system to run it should be configured in deployment script
 	filelimits.MaxOpenFiles()
 	cfg, err := config.Load()
 	if err != nil {

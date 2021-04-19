@@ -2,7 +2,7 @@ package broadcast
 
 import (
 	"github.com/fdistorted/websocket-practical/models"
-	"github.com/fdistorted/websocket-practical/server/websocket/storage"
+	"github.com/fdistorted/websocket-practical/websocket/storage"
 	"time"
 )
 
