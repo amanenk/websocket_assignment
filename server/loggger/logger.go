@@ -6,8 +6,6 @@ import (
 
 type RequestIdType string
 
-const requestIDKey RequestIdType = "request_id"
-
 var logger *zap.Logger
 
 func Get() *zap.Logger {

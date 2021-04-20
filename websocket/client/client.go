@@ -1,4 +1,4 @@
-package clients
+package client
 
 import (
 	logger "github.com/fdistorted/websocket-practical/server/loggger"
@@ -9,9 +9,10 @@ import (
 )
 
 type Client struct {
-	mu           sync.Mutex
+	socketMu     sync.Mutex
 	socket       *websocket.Conn
 	ClientId     string
+	dataMu       sync.RWMutex
 	Sub          bool
 	writeChannel chan interface{}
 }
@@ -34,7 +35,16 @@ func (c *Client) Close() error {
 }
 
 func (c *Client) SetSubscribed(sub bool) {
+	c.dataMu.Lock()
 	c.Sub = sub
+	c.dataMu.Unlock()
+}
+
+func (c *Client) GetSubscribed() bool {
+	c.dataMu.RLock()
+	sub := c.Sub
+	c.dataMu.RUnlock()
+	return sub
 }
 
 func (c *Client) Read(callback func(data map[string]interface{}, err error)) {
@@ -55,16 +65,26 @@ func (c *Client) Write() {
 	for {
 		select {
 		case toWrite := <-c.writeChannel:
-			c.mu.Lock()
+			c.socketMu.Lock()
 			err := c.socket.WriteJSON(toWrite)
 			if err != nil {
 				handleClientError("failed to write to client", c.ClientId, err)
 				// todo decide if we need to close the connection
 				return
 			}
-			c.mu.Unlock()
+			c.socketMu.Unlock()
 		}
 	}
+}
+
+func (c *Client) SendClose() {
+	c.socketMu.Lock()
+	err := c.socket.WriteMessage(websocket.CloseMessage, websocket.FormatCloseMessage(websocket.CloseNormalClosure, ""))
+	if err != nil {
+		logger.Get().Error("write close:", zap.Error(err))
+		return
+	}
+	c.socketMu.Unlock()
 }
 
 func handleClientError(msg, clientId string, err error) {

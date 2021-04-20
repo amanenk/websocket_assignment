@@ -12,7 +12,6 @@ import (
 	"log"
 	"net/http"
 	"os"
-	"time"
 )
 
 func Start() {
@@ -22,9 +21,6 @@ func Start() {
 	if err != nil {
 		log.Fatalf("Failed to laod config: %v", err)
 	}
-
-	//log.Printf("config loaded: %+v\n", cfg)
-	//log.Printf("port variable: %+v\n", os.Getenv("PORT"))
 
 	err = logger.Load() //todo maybe add some config to loader
 	if err != nil {
@@ -38,17 +34,15 @@ func Start() {
 	addr := fmt.Sprintf(":%d", cfg.Port)
 
 	server := &http.Server{
-		Addr:         addr,
-		Handler:      handlers.NewRouter(storage),
-		ReadTimeout:  5 * time.Second,
-		WriteTimeout: 5 * time.Second,
+		Addr:    addr,
+		Handler: handlers.NewRouter(storage),
 	}
 
 	logger.Get().Info("Listening...", zap.String("listen_url", addr))
 	err = server.ListenAndServe()
 	if err != nil {
 		// logger.Get().Error("Failed to initialize HTTP server", zap.Error(err))
-		fmt.Println("failed to start server")
+		fmt.Println("failed to start the server")
 		os.Exit(1)
 	}
 }

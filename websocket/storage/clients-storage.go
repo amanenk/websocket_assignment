@@ -1,14 +1,14 @@
 package storage
 
 import (
-	"github.com/fdistorted/websocket-practical/websocket/clients"
+	"github.com/fdistorted/websocket-practical/websocket/client"
 	"sync"
 )
 
 // SafeCounter is safe to use concurrently.
 type Storage struct {
 	Mutex   sync.RWMutex
-	Clients map[string]*clients.Client
+	Clients map[string]*client.Client
 }
 
 func (c *Storage) Delete(clientId string) {
@@ -17,7 +17,7 @@ func (c *Storage) Delete(clientId string) {
 	c.Mutex.Unlock()
 }
 
-func (c *Storage) Add(client *clients.Client) {
+func (c *Storage) Add(client *client.Client) {
 	c.Mutex.Lock()
 	// Lock so only one goroutine at a time can access the map c.v.
 	c.Clients[client.ClientId] = client
@@ -41,5 +41,5 @@ func (c *Storage) GetClientId() int {
 //var StorageObject = &Storage{Clients: make(map[string]*Client)}
 
 func NewStorage() *Storage {
-	return &Storage{Clients: make(map[string]*clients.Client)}
+	return &Storage{Clients: make(map[string]*client.Client)}
 }

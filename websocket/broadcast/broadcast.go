@@ -23,7 +23,7 @@ func InitBroadcast(storage *storage.Storage) chan bool {
 
 				storage.Mutex.Lock()
 				for _, client := range storage.Clients {
-					if client.Sub {
+					if client.GetSubscribed() {
 						msg.ClientId = client.ClientId
 						client.Send(msg)
 					}

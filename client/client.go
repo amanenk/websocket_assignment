@@ -5,8 +5,7 @@ import (
 	"github.com/fdistorted/websocket-practical/filelimits"
 	"github.com/fdistorted/websocket-practical/models"
 	logger "github.com/fdistorted/websocket-practical/server/loggger"
-	"github.com/fdistorted/websocket-practical/websocket/clients"
-	"go.uber.org/zap"
+	"github.com/fdistorted/websocket-practical/websocket/client"
 	"log"
 	"math/rand"
 	"os"
@@ -22,19 +21,17 @@ func Start(url string) {
 	interrupt := make(chan os.Signal, 1)
 	signal.Notify(interrupt, os.Interrupt)
 
-	logger.Get().Debug("connecting", zap.String("url", url))
-
 	conn, _, err := websocket.DefaultDialer.Dial(url, nil)
 	if err != nil {
 		log.Fatal("dial:", err)
 	}
 
-	client := clients.NewClient(conn)
+	client := client.NewClient(conn)
 
 	defer func() {
 		err := client.Close()
 		if err != nil {
-			logger.Get().Error("failed to close client connection", zap.Error(err))
+			fmt.Println("failed to close client connection")
 		}
 	}()
 
@@ -49,10 +46,9 @@ func Start(url string) {
 				// todo handle it somehow
 				return
 			}
-			//fmt.Printf("got data: %+v\n", data)
 			value, ok := data["num_connections"]
 			if ok {
-				fmt.Printf("num_connections: %v\r", value)
+				fmt.Printf("num_connections: %v   \r", value)
 			}
 		})
 	}()
@@ -69,15 +65,10 @@ func Start(url string) {
 		case <-subscribeTimer.C:
 			client.Send(models.CommandBody{Command: models.Subscribe})
 		case <-interrupt:
-			//log.Println("interrupt")
+			//fmt.Println("interrupt")
 
 			// Cleanly close the connection by sending a close message and then
-			// waiting (with timeout) for the server to close the connection.
-			err := conn.WriteMessage(websocket.CloseMessage, websocket.FormatCloseMessage(websocket.CloseNormalClosure, ""))
-			if err != nil {
-				log.Println("write close:", err)
-				return
-			}
+			client.SendClose()
 			select {
 			case <-done:
 			case <-time.After(2 * time.Second):
@@ -85,12 +76,11 @@ func Start(url string) {
 			return
 		}
 	}
-	logger.Get().Debug("exiting")
 }
 
 func main() {
-
 	filelimits.MaxOpenFiles()
+
 	err := logger.Load()
 	if err != nil {
 		log.Fatalf("Failed to laod logger: %v", err)
@@ -107,26 +97,27 @@ func main() {
 	if len(args) >= 2 {
 		parsed, err := strconv.Atoi(args[1])
 		if err != nil {
-			logger.Get().Fatal("failed to parse argument. try again")
+			fmt.Println("failed to parse argument. try again")
+			return
 		}
 		if parsed > 20000 {
-			logger.Get().Fatal("number of connections is too big")
+			fmt.Println("number of connections is too big")
+			return
 		}
 		connections = parsed
 	}
 
 	var wg sync.WaitGroup
 
-	logger.Get().Info("connecting...", zap.Int("connections", connections), zap.String("url", url))
+	fmt.Printf("connecting to: %s with %d connections\n", url, connections)
 
 	for i := 0; i < connections; i++ {
-		//time.Sleep(time.Millisecond * 1)
+		time.Sleep(time.Millisecond * 1)
 		wg.Add(1)
 		go func() {
 			Start(url)
 			wg.Done()
 		}()
-		//fmt.Printf("\r%d connections", i+1)
 	}
 
 	wg.Wait()

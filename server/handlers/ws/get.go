@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"github.com/fdistorted/websocket-practical/models"
 	logger "github.com/fdistorted/websocket-practical/server/loggger"
-	"github.com/fdistorted/websocket-practical/websocket/clients"
+	"github.com/fdistorted/websocket-practical/websocket/client"
 	storage2 "github.com/fdistorted/websocket-practical/websocket/storage"
 	"github.com/gorilla/websocket"
 	"go.uber.org/zap"
@@ -35,9 +35,9 @@ func (wh *WebsocketHandler) Get(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	client := clients.NewClient(conn)
+	client := client.NewClient(conn)
 	wh.storage.Add(client)
-	logger.Get().Debug("client connected", zap.String("client_id", client.ClientId), zap.Int("clients", wh.storage.GetClientsCount()))
+	logger.Get().Debug("client connected", zap.String("client_id", client.ClientId), zap.Int("client", wh.storage.GetClientsCount()))
 	defer func() {
 		logger.Get().Debug("closing connection", zap.String("client_id", client.ClientId))
 		client.SetSubscribed(false)
