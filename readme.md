@@ -4,6 +4,11 @@
 ```
 go run main.go
 ```
+or run it in the container
+```
+docker build -t websocket_test_app .
+docker run -p 5000:5000 websocket_test_app
+```
 ### Start Client
 ```
 go run ./client/client.go 
